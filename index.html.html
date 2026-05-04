@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Data Quality Governance Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0C0C14;--s1:#13131F;--s2:#191926;--card:#1C1C2C;
+  --border:rgba(168,85,247,0.12);--border2:rgba(168,85,247,0.28);
+  --purple:#A855F7;--violet:#7C3AED;--pink:#EC4899;
+  --green:#10B981;--amber:#F59E0B;--red:#EF4444;--blue:#3B82F6;
+  --text:#EDE9FE;--muted:#6D5F8A;--dim:#2D2040;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 800px 600px at -10% 10%,rgba(124,58,237,0.08),transparent 55%),
+             radial-gradient(ellipse 600px 500px at 110% 80%,rgba(168,85,247,0.06),transparent 55%);
+  pointer-events:none;z-index:0;}
+
+.wrap{position:relative;z-index:1;padding:2rem;}
+
+/* HDR */
+.hdr{display:grid;grid-template-columns:1fr auto;gap:2rem;align-items:start;margin-bottom:1.8rem;padding-bottom:1.4rem;border-bottom:1px solid var(--border);}
+.tag{font-family:'Syne',sans-serif;font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--purple);background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.25);padding:.25rem .7rem;border-radius:3px;display:inline-block;margin-bottom:.6rem;}
+h1{font-family:'Syne',sans-serif;font-size:1.4rem;font-weight:700;line-height:1.2;}
+.sub{font-size:.78rem;color:var(--muted);margin-top:.3rem;}
+.hdr-right{display:flex;flex-direction:column;gap:.5rem;align-items:flex-end;}
+.overall-score{background:var(--card);border:1px solid var(--border2);border-radius:12px;padding:1rem 1.5rem;text-align:center;}
+.os-val{font-family:'Syne',sans-serif;font-size:2.4rem;font-weight:800;color:var(--purple);line-height:1;}
+.os-lbl{font-size:.65rem;color:var(--muted);margin-top:.2rem;letter-spacing:.1em;text-transform:uppercase;}
+.os-delta{font-size:.72rem;color:var(--green);margin-top:.3rem;}
+
+/* KPIs */
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:.9rem;margin-bottom:1.5rem;}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:1rem;position:relative;overflow:hidden;opacity:0;transform:translateY(14px);transition:all .5s;}
+.kpi.show{opacity:1;transform:translateY(0);}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:100%;height:2px;background:linear-gradient(90deg,var(--kc,var(--purple)),transparent);}
+.kl{font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.5rem;}
+.kv{font-family:'Syne',sans-serif;font-size:1.6rem;font-weight:700;color:var(--kc,var(--purple));line-height:1;}
+.kd{font-size:.65rem;margin-top:.3rem;}
+.up{color:var(--green);}.dn{color:var(--red);}.nt{color:var(--muted);}
+
+/* GRID */
+.row{display:grid;gap:1rem;margin-bottom:1rem;}
+.r-3{grid-template-columns:1fr 1fr 1fr;}
+.r-2-1{grid-template-columns:1.5fr 1fr;}
+.r-2{grid-template-columns:1fr 1fr;}
+
+/* CARD */
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.4rem;opacity:0;transform:translateY(14px);transition:all .5s;}
+.card.show{opacity:1;transform:translateY(0);}
+.card:hover{border-color:var(--border2);}
+.ctitle{font-family:'Syne',sans-serif;font-size:.65rem;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--purple);margin-bottom:1.2rem;}
+
+/* DIMENSION GAUGE grid */
+.dim-grid{display:grid;grid-template-columns:1fr 1fr;gap:.9rem;}
+.dim-item{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:1rem;}
+.di-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.6rem;}
+.di-name{font-family:'Syne',sans-serif;font-size:.78rem;font-weight:600;color:var(--text);}
+.di-score{font-family:'Outfit',monospace;font-size:.9rem;font-weight:600;}
+.di-bar-track{height:6px;background:var(--dim);border-radius:3px;overflow:hidden;}
+.di-bar{height:100%;border-radius:3px;width:0;transition:width 1.2s ease;}
+.di-sub{font-size:.65rem;color:var(--muted);margin-top:.4rem;}
+
+/* RAG table */
+.rag-table{width:100%;border-collapse:collapse;font-size:.72rem;}
+.rag-table th{padding:.4rem .6rem;text-align:left;color:var(--muted);font-size:.58rem;letter-spacing:.12em;text-transform:uppercase;border-bottom:1px solid var(--border);}
+.rag-table td{padding:.55rem .6rem;border-bottom:1px solid rgba(168,85,247,0.05);}
+.rag-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:.4rem;vertical-align:middle;}
+.pill{display:inline-block;padding:.15rem .55rem;border-radius:3px;font-size:.62rem;font-weight:600;}
+
+/* Treemap-style visual */
+.treemap{display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;}
+.tm-cell{border-radius:6px;padding:.8rem;text-align:center;transition:all .3s;}
+.tm-val{font-family:'Syne',sans-serif;font-size:1.3rem;font-weight:700;}
+.tm-lbl{font-size:.65rem;margin-top:.2rem;}
+
+/* Anomaly timeline */
+.anom-list{display:flex;flex-direction:column;gap:.7rem;}
+.anom-item{display:flex;gap:.8rem;align-items:flex-start;padding:.65rem;background:var(--s2);border-radius:6px;border:1px solid var(--border);}
+.anom-sev{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.75rem;flex-shrink:0;font-weight:600;}
+.anom-text{font-size:.75rem;line-height:1.5;color:var(--muted);}
+.anom-text strong{color:var(--text);display:block;font-size:.78rem;}
+.anom-tag{font-size:.6rem;padding:.1rem .5rem;border-radius:3px;margin-left:.3rem;}
+
+/* insight */
+.insight{background:rgba(168,85,247,0.06);border:1px solid rgba(168,85,247,0.18);border-left:3px solid var(--purple);border-radius:0 8px 8px 0;padding:.8rem 1rem;margin-top:.9rem;font-size:.75rem;color:#C4B5FD;line-height:1.6;}
+.insight b{color:var(--text);display:block;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.25rem;}
+
+/* validation rules */
+.rule-list{display:flex;flex-direction:column;gap:.6rem;}
+.rule-item{display:flex;align-items:center;gap:.8rem;padding:.6rem;background:var(--s2);border-radius:6px;}
+.rule-icon{font-size:.85rem;flex-shrink:0;}
+.rule-text{font-size:.74rem;color:var(--muted);flex:1;}
+.rule-text strong{color:var(--text);display:block;font-size:.76rem;}
+.rule-status{font-size:.6rem;padding:.15rem .5rem;border-radius:3px;font-weight:600;flex-shrink:0;}
+
+.footer{margin-top:1.5rem;padding-top:.9rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;font-size:.65rem;color:var(--muted);}
+.footer a{color:var(--purple);text-decoration:none;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HDR -->
+<div class="hdr">
+  <div>
+    <div class="tag">github.com/saivarnika/data-quality-audit</div>
+    <h1>Data Quality Governance &amp;<br>Health Monitoring Report</h1>
+    <div class="sub">Power BI · SQL · ETL Validation · Data Governance · RAG Alerting · 6,000+ records</div>
+  </div>
+  <div class="hdr-right">
+    <div class="overall-score">
+      <div class="os-val" data-t="87.3" data-s="%" data-d="1">0%</div>
+      <div class="os-lbl">Overall DQ Score</div>
+      <div class="os-delta">↑ From 72.1% baseline · +15.2pp</div>
+    </div>
+  </div>
+</div>
+
+<!-- KPI ROW -->
+<div class="kpi-row">
+  <div class="kpi" style="--kc:var(--red)">
+    <div class="kl">Missing / Null</div>
+    <div class="kv" data-t="12" data-s="%">0%</div>
+    <div class="kd dn">720 of 6,000 records</div>
+  </div>
+  <div class="kpi" style="--kc:var(--amber)">
+    <div class="kl">Duplicates Found</div>
+    <div class="kv" data-t="4.3" data-s="%" data-d="1">0%</div>
+    <div class="kd dn">258 duplicate entries</div>
+  </div>
+  <div class="kpi" style="--kc:var(--purple)">
+    <div class="kl">Consistency Issues</div>
+    <div class="kv" data-t="6.8" data-s="%" data-d="1">0%</div>
+    <div class="kd nt">Format & schema drift</div>
+  </div>
+  <div class="kpi" style="--kc:var(--green)">
+    <div class="kl">Error Reduction</div>
+    <div class="kv" data-t="20" data-s="%">0%</div>
+    <div class="kd up">Post-governance rules</div>
+  </div>
+  <div class="kpi" style="--kc:var(--blue)">
+    <div class="kl">Records Audited</div>
+    <div class="kv" data-t="6240">0</div>
+    <div class="kd nt">Full dataset coverage</div>
+  </div>
+</div>
+
+<!-- ROW 1 -->
+<div class="row r-2-1">
+  <!-- 4 dimensions -->
+  <div class="card">
+    <div class="ctitle">◈ Data Quality Dimensions — Score by Category</div>
+    <div class="dim-grid">
+      <div class="dim-item">
+        <div class="di-header">
+          <div class="di-name">✅ Completeness</div>
+          <div class="di-score" style="color:var(--amber)">78%</div>
+        </div>
+        <div class="di-bar-track"><div class="di-bar" style="background:var(--amber);--w:78%"></div></div>
+        <div class="di-sub">720 records with missing fields. Customer email &amp; phone most impacted.</div>
+      </div>
+      <div class="dim-item">
+        <div class="di-header">
+          <div class="di-name">🎯 Accuracy</div>
+          <div class="di-score" style="color:var(--green)">91%</div>
+        </div>
+        <div class="di-bar-track"><div class="di-bar" style="background:var(--green);--w:91%"></div></div>
+        <div class="di-sub">Valid formats confirmed via SQL regex validation patterns across all fields.</div>
+      </div>
+      <div class="dim-item">
+        <div class="di-header">
+          <div class="di-name">🔗 Consistency</div>
+          <div class="di-score" style="color:var(--red)">83%</div>
+        </div>
+        <div class="di-bar-track"><div class="di-bar" style="background:var(--red);--w:83%"></div></div>
+        <div class="di-sub">Schema drift between monthly imports. Date formats inconsistent across 3 sources.</div>
+      </div>
+      <div class="dim-item">
+        <div class="di-header">
+          <div class="di-name">🔁 Uniqueness</div>
+          <div class="di-score" style="color:var(--purple)">95.7%</div>
+        </div>
+        <div class="di-bar-track"><div class="di-bar" style="background:var(--purple);--w:95.7%"></div></div>
+        <div class="di-sub">258 duplicates removed. Customer ID + email used as composite key for dedup.</div>
+      </div>
+    </div>
+    <div class="insight"><b>SQL-Based ETL Validation</b>All 4 dimensions validated through SQL CTEs — separate validation queries for null checks, regex patterns, cross-table consistency, and GROUP BY deduplication. Results piped into Power BI for visual alerting.</div>
+  </div>
+
+  <!-- Overall treemap-style -->
+  <div class="card">
+    <div class="ctitle">◉ Issue Breakdown by Volume</div>
+    <div class="treemap">
+      <div class="tm-cell" style="background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25);grid-column:span 2">
+        <div class="tm-val" style="color:var(--red)">720</div>
+        <div class="tm-lbl" style="color:var(--red)">Missing / Null Records</div>
+      </div>
+      <div class="tm-cell" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.22)">
+        <div class="tm-val" style="color:var(--amber)">258</div>
+        <div class="tm-lbl" style="color:var(--amber)">Duplicates</div>
+      </div>
+      <div class="tm-cell" style="background:rgba(168,85,247,0.1);border:1px solid rgba(168,85,247,0.22)">
+        <div class="tm-val" style="color:var(--purple)">408</div>
+        <div class="tm-lbl" style="color:var(--purple)">Consistency</div>
+      </div>
+      <div class="tm-cell" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.22)">
+        <div class="tm-val" style="color:var(--blue)">112</div>
+        <div class="tm-lbl" style="color:var(--blue)">Schema Drift</div>
+      </div>
+    </div>
+    <div style="margin-top:1rem">
+      <div style="font-size:.65rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.5rem">Post-Governance Improvement</div>
+      <div style="display:flex;align-items:center;gap:.7rem">
+        <div style="flex:1;height:8px;background:var(--dim);border-radius:4px;overflow:hidden">
+          <div style="height:100%;width:0;background:linear-gradient(90deg,var(--purple),var(--pink));border-radius:4px;transition:width 1.2s ease" class="di-bar" style="--w:80%"></div>
+        </div>
+        <div style="font-size:.72rem;color:var(--green);font-weight:600;white-space:nowrap">−20% errors</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ROW 2 -->
+<div class="row r-2">
+  <!-- Anomaly log -->
+  <div class="card">
+    <div class="ctitle">⚠ Anomaly Detection Log — Pre-Downstream Alerts</div>
+    <div class="anom-list">
+      <div class="anom-item">
+        <div class="anom-sev" style="background:rgba(239,68,68,0.15);color:var(--red)">🔴</div>
+        <div class="anom-text"><strong>Null Customer Email — 342 records</strong>Detected before monthly revenue report. Flagged to data team. Source: CRM export missing optional field. Risk: Revenue report misattribution.<span class="anom-tag" style="background:rgba(239,68,68,0.12);color:var(--red)">CRITICAL</span></div>
+      </div>
+      <div class="anom-item">
+        <div class="anom-sev" style="background:rgba(245,158,11,0.12);color:var(--amber)">🟡</div>
+        <div class="anom-text"><strong>Duplicate Order IDs — 258 records</strong>Composite key violation (Customer_ID + Order_Date). Removed before aggregation. Caused by ETL double-import on retry logic.<span class="anom-tag" style="background:rgba(245,158,11,0.12);color:var(--amber)">AMBER</span></div>
+      </div>
+      <div class="anom-item">
+        <div class="anom-sev" style="background:rgba(168,85,247,0.12);color:var(--purple)">🟣</div>
+        <div class="anom-text"><strong>Date Format Inconsistency — 408 records</strong>DD/MM/YYYY vs MM-DD-YYYY mismatch between regional data sources. Standardised in SQL ETL layer using CAST + CONVERT.<span class="anom-tag" style="background:rgba(168,85,247,0.12);color:var(--purple)">SCHEMA</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Governance rules -->
+  <div class="card">
+    <div class="ctitle">🛡 Governance Controls Recommended &amp; Implemented</div>
+    <div class="rule-list">
+      <div class="rule-item">
+        <div class="rule-icon">✅</div>
+        <div class="rule-text"><strong>NOT NULL constraint on Customer_ID, Email</strong>Prevents null primary keys from entering reporting layer.</div>
+        <div class="rule-status" style="background:rgba(16,185,129,0.12);color:var(--green)">LIVE</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-icon">✅</div>
+        <div class="rule-text"><strong>Composite dedup check (ID + Date)</strong>SQL CTE flags duplicates before load. ETL retry logic patched.</div>
+        <div class="rule-status" style="background:rgba(16,185,129,0.12);color:var(--green)">LIVE</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-icon">✅</div>
+        <div class="rule-text"><strong>Date format standardisation via CAST()</strong>All date fields normalised to ISO 8601 in ETL transformation step.</div>
+        <div class="rule-status" style="background:rgba(16,185,129,0.12);color:var(--green)">LIVE</div>
+      </div>
+      <div class="rule-item">
+        <div class="rule-icon">🔄</div>
+        <div class="rule-text"><strong>RAG alerting on DQ score threshold &lt;80%</strong>Power BI conditional formatting triggers amber/red visual alerts in real time.</div>
+        <div class="rule-status" style="background:rgba(245,158,11,0.12);color:var(--amber)">PENDING</div>
+      </div>
+    </div>
+    <div class="insight"><b>Business Impact</b>By surfacing data issues before they hit downstream reports, estimated reporting error reduction of ~20%. Non-technical stakeholders now read RAG signals without SQL knowledge — removing dependency on analyst for every quality check.</div>
+  </div>
+</div>
+
+<div class="footer">
+  <div>Sai Varnika Devulapally · Business Analyst · <a href="http://linkedin.com/in/saivarnikadevulapally/">LinkedIn</a></div>
+  <div><a href="https://github.com/saivarnika/data-quality-audit">github.com/saivarnika/data-quality-audit</a> · Power BI · SQL · ETL · Governance</div>
+</div>
+</div>
+
+<script>
+function counter(){
+  document.querySelectorAll('[data-t]').forEach(el=>{
+    const t=parseFloat(el.dataset.t),s=el.dataset.s||'',d=parseInt(el.dataset.d||0);
+    let st=0;const go=ts=>{if(!st)st=ts;const p=Math.min((ts-st)/1400,1),e=1-Math.pow(1-p,3);
+    el.textContent=(t*e).toFixed(d)+s;if(p<1)requestAnimationFrame(go);};requestAnimationFrame(go);
+  });
+}
+function bars(){
+  document.querySelectorAll('.di-bar').forEach(el=>{
+    const w=el.style.cssText.match(/--w:([^;]+)/)?.[1]||'0%';
+    setTimeout(()=>el.style.width=w,300);
+  });
+}
+const obs=new IntersectionObserver(entries=>entries.forEach((e,i)=>{
+  if(e.isIntersecting)setTimeout(()=>e.target.classList.add('show'),i*70);
+}),{threshold:0.05});
+document.querySelectorAll('.card,.kpi').forEach(c=>obs.observe(c));
+window.addEventListener('load',()=>setTimeout(()=>{counter();bars();},300));
+</script>
+</body>
+</html>
